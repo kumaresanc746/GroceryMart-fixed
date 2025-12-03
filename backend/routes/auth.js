@@ -27,7 +27,7 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-// Login with auto-fix for legacy plaintext passwords
+// Login with support for legacy plain-text passwords
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -36,25 +36,32 @@ router.post('/login', async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(401).json({ message: "Invalid email or password" });
 
-        // First try bcrypt compare
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (isMatch) {
-            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'supersecretkey', { expiresIn: '7d' });
-            return res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email } });
+        // Try bcrypt compare first
+        let isMatch = false;
+        try {
+            isMatch = await bcrypt.compare(password, user.password);
+        } catch (e) {
+            isMatch = false;
         }
 
-        // If bcrypt failed, check if stored password is plain-text (legacy).
-        if (password === user.password) {
-            // Re-hash and save the password securely, then return token
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(password, salt);
-            await user.save();
-
-            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'supersecretkey', { expiresIn: '7d' });
-            return res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email } });
+        // If bcrypt compare fails, allow legacy plain-text match and rehash
+        if (!isMatch && password === user.password) {
+            try {
+                const salt = await bcrypt.genSalt(10);
+                user.password = await bcrypt.hash(password, salt);
+                await user.save();
+                isMatch = true;
+            } catch (e) {
+                console.error('Error rehashing plaintext password:', e);
+            }
         }
 
-        return res.status(401).json({ message: "Invalid password" });
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid password" });
+        }
+
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'supersecretkey', { expiresIn: '7d' });
+        return res.json({ success: true, token, user: { id: user._id, name: user.name, email: user.email } });
     } catch (err) {
         console.error('LOGIN ERROR:', err);
         res.status(500).json({ message: "Server error" });
