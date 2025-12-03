@@ -8,39 +8,38 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
-// Allow preflight for all routes
 app.options('*', cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 // MongoDB Connection
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://mongo:27017/grocery-store';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery-store';
 
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.error("MongoDB connection error:", err));
+.then(() => console.log('MongoDB Connected'))
+.catch((err) => console.error('MongoDB Connection Error:', err));
 
-// =====================
-// Load User Routes
-// =====================
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/cart', require('./routes/cart'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/user', require('./routes/user'));
+// ------------------------------
+// ROUTES IMPORT (use actual route filenames)
+// ------------------------------
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const cartRoutes = require('./routes/cart');
+const orderRoutes = require('./routes/orders');
+const adminRoutes = require('./routes/admin');
 
-// =====================
-// Load Admin Routes (ALL FILES)
-// =====================
-app.use('/api/admin', require('./routes/admin'));        // dashboard routes
-app.use('/api/admin', require('./routes/adminLogin'));   // login route
-app.use('/api/admin', require('./routes/adminAuth'));    // JWT verify
+// ------------------------------
+// ROUTES REGISTER
+// ------------------------------
+app.use('/api', authRoutes);               // /login, /signup (auth.js)
+app.use('/api/products', productRoutes);   // products CRUD (products.js)
+app.use('/api/cart', cartRoutes);          // cart (cart.js)
+app.use('/api/orders', orderRoutes);       // orders (orders.js)
+app.use('/api/admin', adminRoutes);        // admin (admin.js)
 
-// =====================
-// Health Check
-// =====================
+// Health route
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running' });
 });
