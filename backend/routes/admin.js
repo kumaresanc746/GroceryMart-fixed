@@ -21,9 +21,7 @@ router.post('/login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, admin.password);
         if (!isMatch) return res.status(400).json({ message: "Invalid password" });
 
-        const token = jwt.sign({ id: admin._id, role: "admin" }, JWT_SECRET, {
-            expiresIn: "1d"
-        });
+        const token = jwt.sign({ id: admin._id, role: "admin" }, JWT_SECRET, { expiresIn: "1d" });
 
         res.json({ success: true, token, admin });
     } catch (err) {
@@ -58,7 +56,21 @@ router.get('/products', verifyAdmin, async (req, res) => {
     res.json({ success: true, products });
 });
 
-// ADD product  (THIS FIXES YOUR 404 ERROR!)
+// ⭐ FIXED: Get single product for edit page
+router.get('/products/:id', verifyAdmin, async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+        res.json({ success: true, product });
+    } catch (err) {
+        console.log("Admin Get Product Error:", err);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+// Add product
 router.post('/products/add', verifyAdmin, async (req, res) => {
     try {
         const newProduct = new Product(req.body);
