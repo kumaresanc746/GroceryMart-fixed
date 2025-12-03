@@ -10,10 +10,23 @@ function getAdminToken() {
     return localStorage.getItem('adminToken');
 }
 
-// API Helper Functions
+// ------------------------
+// USER API REQUEST
+// ------------------------
 async function apiRequest(endpoint, options = {}) {
     const token = getAuthToken();
-    const url = API_BASE_URL + endpoint;
+    
+    // FIXED BACKEND ROUTES
+    const fixedEndpoints = {
+        '/login': '/auth/login',
+        '/register': '/auth/register',
+        '/products': '/products',
+        '/cart': '/cart',
+        '/orders': '/orders'
+    };
+
+    const finalEndpoint = fixedEndpoints[endpoint] || endpoint;
+    const url = API_BASE_URL + finalEndpoint;
 
     const defaultHeaders = {
         'Content-Type': 'application/json'
@@ -25,7 +38,7 @@ async function apiRequest(endpoint, options = {}) {
 
     const fetchOptions = {
         method: options.method || 'GET',
-        headers: Object.assign(defaultHeaders, options.headers || {}),
+        headers: Object.assign(defaultHeaders, options.headers || {})
     };
 
     if (options.body) {
@@ -33,6 +46,7 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     const response = await fetch(url, fetchOptions);
+
     let data = null;
     try {
         data = await response.json();
@@ -42,35 +56,58 @@ async function apiRequest(endpoint, options = {}) {
 
     if (!response.ok) {
         if (response.status === 401) {
-            // unauthorized - clear token and redirect to login
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = 'login.html';
         }
-        // throw to let caller handle
         throw { response, data };
     }
 
     return { response, data };
 }
 
+
+
+// ------------------------
+// ADMIN API REQUEST
+// ------------------------
 async function adminApiRequest(endpoint, options = {}) {
     const token = getAdminToken();
-    const url = API_BASE_URL + endpoint;
+
+    // FIX ADMIN ROUTES
+    const fixedEndpoints = {
+        '/admin/login': '/admin/login',
+        '/admin/products': '/admin/products',
+        '/admin/orders': '/admin/orders'
+    };
+
+    const finalEndpoint = fixedEndpoints[endpoint] || endpoint;
+
+    const url = API_BASE_URL + finalEndpoint;
 
     const defaultHeaders = { 'Content-Type': 'application/json' };
-    if (token) defaultHeaders['Authorization'] = `Bearer ${token}`;
+
+    if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
 
     const fetchOptions = {
         method: options.method || 'GET',
-        headers: Object.assign(defaultHeaders, options.headers || {}),
+        headers: Object.assign(defaultHeaders, options.headers || {})
     };
 
-    if (options.body) fetchOptions.body = JSON.stringify(options.body);
+    if (options.body) {
+        fetchOptions.body = JSON.stringify(options.body);
+    }
 
     const response = await fetch(url, fetchOptions);
+
     let data = null;
-    try { data = await response.json(); } catch (e) { data = null; }
+    try {
+        data = await response.json();
+    } catch (e) {
+        data = null;
+    }
 
     if (!response.ok) {
         if (response.status === 401) {
@@ -80,5 +117,6 @@ async function adminApiRequest(endpoint, options = {}) {
         }
         throw { response, data };
     }
+
     return { response, data };
 }
