@@ -1,5 +1,11 @@
 // API Configuration
-const API_BASE_URL = "http://13.61.230.65:3000/api";
+const API_BASE_URL = (function() {
+    // Use same host as the page, and default to port 3000 where backend typically runs.
+    const proto = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = 3000;
+    return `${proto}//${hostname}:${port}/api`;
+})();
 
 // Helper function to get auth token
 function getAuthToken() {
