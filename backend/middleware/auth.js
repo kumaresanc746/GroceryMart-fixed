@@ -4,59 +4,51 @@ const Admin = require('../models/Admin');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// User authentication middleware
-const authUser = async (req, res, next) => {
+// Default export → used for user auth
+module.exports = async function (req, res, next) {
     try {
-        const token = req.header('Authorization')?.replace('Bearer ', '');
-
-        if (!token) {
-            return res.status(401).json({ message: 'No token, authorization denied' });
-        }
+        const token = req.header("Authorization")?.replace("Bearer ", "");
+        if (!token)
+            return res.status(401).json({ success: false, message: "No token provided" });
 
         const decoded = jwt.verify(token, JWT_SECRET);
 
-        // FIX: login route uses "id", not "userId"
-        const userId = decoded.userId || decoded.id;
+        // user login creates: jwt.sign({ id: user._id })
+        const userId = decoded.id || decoded.userId;
+        const user = await User.findById(userId).select("-password");
 
-        const user = await User.findById(userId).select('-password');
-
-        if (!user) {
-            return res.status(401).json({ message: 'User not found' });
-        }
+        if (!user)
+            return res.status(401).json({ success: false, message: "User not found" });
 
         req.user = user;
         next();
     } catch (error) {
-        return res.status(401).json({ message: 'Token is not valid' });
+        return res.status(401).json({ success: false, message: "Invalid token" });
     }
 };
 
-// Admin authentication middleware
-const authAdmin = async (req, res, next) => {
-    try {
-        const token = req.header('Authorization')?.replace('Bearer ', '');
+// Extra exports for admin routes
+module.exports.authUser = module.exports;
 
-        if (!token) {
-            return res.status(401).json({ message: 'No token, authorization denied' });
-        }
+module.exports.authAdmin = async function (req, res, next) {
+    try {
+        const token = req.header("Authorization")?.replace("Bearer ", "");
+        if (!token)
+            return res.status(401).json({ success: false, message: "No token provided" });
 
         const decoded = jwt.verify(token, JWT_SECRET);
 
-        // FIX: your admin login uses decoded.id, not decoded.adminId
-        const adminId = decoded.adminId || decoded.id;
+        const adminId = decoded.id || decoded.adminId;
+        const admin = await Admin.findById(adminId).select("-password");
 
-        // FIX: Look up from Admin model
-        const admin = await Admin.findById(adminId).select('-password');
-
-        if (!admin) {
-            return res.status(401).json({ message: 'Admin not found' });
-        }
+        if (!admin)
+            return res.status(401).json({ success: false, message: "Admin not found" });
 
         req.admin = admin;
         next();
     } catch (error) {
-        return res.status(401).json({ message: 'Token is not valid' });
+        return res.status(401).json({ success: false, message: "Invalid token" });
     }
 };
 
-module.exports = { authUser, authAdmin, JWT_SECRET };
+module.exports.JWT_SECRET = JWT_SECRET;

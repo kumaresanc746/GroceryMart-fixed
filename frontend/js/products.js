@@ -4,7 +4,7 @@ async function loadProducts() {
     const category = urlParams.get('category') || document.getElementById('category-filter')?.value || '';
     const search = document.getElementById('search-input')?.value || '';
     
-    let endpoint = '/products?';
+    let endpoint = '/products';
     if (category) endpoint += `category=${category}&`;
     if (search) endpoint += `search=${encodeURIComponent(search)}&`;
     

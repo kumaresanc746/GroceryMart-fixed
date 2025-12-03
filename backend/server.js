@@ -7,33 +7,38 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({
-    origin: '*',
-    methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization']
-}));
+app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection (use docker service name 'mongo' when running with docker-compose)
+// MongoDB Connection
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://mongo:27017/grocery-store';
+
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
-}).then(() => {
-    console.log('MongoDB connected');
-}).catch((err) => {
-    console.error('MongoDB connection error:', err);
-});
+})
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.error("MongoDB connection error:", err));
 
-// Routes
+// =====================
+// Load User Routes
+// =====================
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/cart', require('./routes/cart'));
 app.use('/api/orders', require('./routes/orders'));
-app.use('/api/admin', require('./routes/admin'));
 app.use('/api/user', require('./routes/user'));
 
-// Health check endpoint
+// =====================
+// Load Admin Routes (ALL FILES)
+// =====================
+app.use('/api/admin', require('./routes/admin'));        // dashboard routes
+app.use('/api/admin', require('./routes/adminLogin'));   // login route
+app.use('/api/admin', require('./routes/adminAuth'));    // JWT verify
+
+// =====================
+// Health Check
+// =====================
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running' });
 });
@@ -44,6 +49,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
 });
 
+// Start Server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
